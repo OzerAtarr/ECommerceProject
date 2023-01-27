@@ -1,7 +1,7 @@
 package com.ozeratar.ecommerce.business.concretes;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -12,6 +12,7 @@ import com.ozeratar.ecommerce.business.responses.create.CreateBrandResponse;
 import com.ozeratar.ecommerce.business.responses.get.GetAllBrandsResponse;
 import com.ozeratar.ecommerce.business.responses.get.GetBrandResponse;
 import com.ozeratar.ecommerce.business.responses.update.UpdateBrandResponse;
+import com.ozeratar.ecommerce.core.untilities.mapping.ModelMapperService;
 import com.ozeratar.ecommerce.dataAccess.BrandRepository;
 import com.ozeratar.ecommerce.entities.Brand;
 
@@ -21,54 +22,41 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class BrandManager implements BrandService {
 	private BrandRepository brandRepository;
+	private ModelMapperService modelMapperService;
 
 	@Override
 	public List<GetAllBrandsResponse> getAll() {
-		List<GetAllBrandsResponse> brandsResponse = new ArrayList<GetAllBrandsResponse>();
 		List<Brand> brands = brandRepository.findAll();
-		for (Brand brand : brands) {
-			GetAllBrandsResponse response = new GetAllBrandsResponse();
-			response.setId(brand.getId());
-			response.setName(brand.getName());
-
-			brandsResponse.add(response);
-		}
+		List<GetAllBrandsResponse> brandsResponse = brands.stream()
+				.map(brand -> this.modelMapperService.forResponse().map(brand, GetAllBrandsResponse.class))
+				.collect(Collectors.toList());
 		return brandsResponse;
 	}
 
 	@Override
 	public GetBrandResponse getById(int id) {
-		GetBrandResponse response = new GetBrandResponse();
 		Brand brand = brandRepository.findById(id).orElse(null);
-		response.setId(brand.getId());
-		response.setName(brand.getName());
+		GetBrandResponse response = modelMapperService.forResponse().map(brand, GetBrandResponse.class);
 
 		return response;
 	}
 
 	@Override
 	public CreateBrandResponse add(CreateBrandRequest createBrandRequest) {
-		CreateBrandResponse response = new CreateBrandResponse();
-		Brand brand = new Brand();
-		brand.setName(createBrandRequest.getName());
-
-		brandRepository.save(brand);
-		response.setId(brand.getId());
-		response.setName(brand.getName());
-
+		Brand brand = modelMapperService.forRequest().map(createBrandRequest, Brand.class);
+		Brand addedBrand = brandRepository.save(brand);
+		CreateBrandResponse response = modelMapperService.forResponse().map(addedBrand, CreateBrandResponse.class);
+		
+		
 		return response;
 	}
 
 	@Override
 	public UpdateBrandResponse update(UpdateBrandRequest updateBrandRequest) {
-		UpdateBrandResponse response = new UpdateBrandResponse();
-		Brand brand = brandRepository.findById(updateBrandRequest.getId()).orElse(null);
-		
-		brand.setName(updateBrandRequest.getName());
-		brandRepository.save(brand);
-		response.setId(brand.getId());
-		response.setName(brand.getName());
-		
+		Brand brand = modelMapperService.forRequest().map(updateBrandRequest, Brand.class);
+		Brand updatedBrand = brandRepository.save(brand);
+		UpdateBrandResponse response = modelMapperService.forResponse().map(updatedBrand, UpdateBrandResponse.class);
+
 		return response;
 	}
 
